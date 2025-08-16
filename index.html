@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordRush - Vocabulary Game</title>
+    <title>WordRush - Crowd Wisdom Game</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -65,7 +65,7 @@
           // Game states: 'lobby', 'entry', 'active', 'results', 'waiting'
           const [gameState, setGameState] = useState('lobby');
           const [timeLeft, setTimeLeft] = useState(300); // 5 minutes until next game
-          const [gameTimer, setGameTimer] = useState(10); // 10 second game timer
+          const [gameTimer, setGameTimer] = useState(7); // 10 second game timer
           const [credits, setCredits] = useState(250);
           const [userAnswer, setUserAnswer] = useState('');
           const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -78,54 +78,64 @@
 
           const questions = [
             {
-              definition: "To show or declare that something is not true by presenting evidence to the contrary",
-              answer: "refute",
-              difficulty: "medium"
-            },
-            {
-              definition: "To escape from a situation or avoid capture in a skillful or cunning way", 
-              answer: "elude",
-              difficulty: "medium"
-            },
-            {
-              definition: "Lacking any interest, excitement, or distinctive qualities; dull and unremarkable",
-              answer: "insipid",
-              difficulty: "hard"
-            },
-            {
-              definition: "To formally withdraw from an organization, alliance, or association",
-              answer: "secede",
-              difficulty: "medium"
-            },
-            {
-              definition: "Not easily upset, disturbed, or excited; calm and unflappable under pressure",
-              answer: "placid",
+              prompt: "Name a word that means 'very big'",
+              responses: ["big", "huge", "large", "enormous", "giant", "massive", "gigantic", "vast"],
+              weights: [30, 25, 15, 12, 8, 5, 3, 2], // Popularity weights
               difficulty: "easy"
             },
             {
-              definition: "To express strong disapproval of something, often in a formal or official manner",
-              answer: "censure",
-              difficulty: "medium"
-            },
-            {
-              definition: "A person who gains advantage through flattering or pleasing someone of higher status",
-              answer: "sycophant",
-              difficulty: "hard"
-            },
-            {
-              definition: "To make an idea or belief clearly understood by explaining it in detail",
-              answer: "expound",
-              difficulty: "medium"
-            },
-            {
-              definition: "Extremely careful and precise about details; showing great attention to accuracy",
-              answer: "meticulous",
+              prompt: "Name a word that means 'very angry'",
+              responses: ["mad", "furious", "angry", "livid", "irate", "rage", "pissed", "enraged"],
+              weights: [35, 20, 18, 10, 8, 4, 3, 2],
               difficulty: "easy"
             },
             {
-              definition: "To strengthen or support an argument, claim, or structure with additional evidence or material",
-              answer: "bolster",
+              prompt: "Name a word that means 'very cold'",
+              responses: ["cold", "freezing", "icy", "frigid", "frozen", "chilly", "arctic", "bitter"],
+              weights: [25, 30, 15, 12, 8, 6, 3, 1],
+              difficulty: "easy"
+            },
+            {
+              prompt: "Name a word that means 'very tired'",
+              responses: ["tired", "exhausted", "beat", "worn", "weary", "drained", "sleepy", "fatigued"],
+              weights: [32, 28, 15, 10, 7, 4, 3, 1],
+              difficulty: "easy"
+            },
+            {
+              prompt: "Name a word that means 'very smart'",
+              responses: ["smart", "intelligent", "brilliant", "clever", "genius", "wise", "bright", "brainy"],
+              weights: [30, 25, 18, 12, 8, 4, 2, 1],
+              difficulty: "easy"
+            },
+            {
+              prompt: "Name a word that means 'very happy'",
+              responses: ["happy", "excited", "joyful", "thrilled", "elated", "glad", "cheerful", "ecstatic"],
+              weights: [35, 20, 15, 12, 8, 5, 3, 2],
+              difficulty: "easy"
+            },
+            {
+              prompt: "Name a word that means 'to move quickly'",
+              responses: ["run", "rush", "hurry", "sprint", "dash", "race", "speed", "bolt"],
+              weights: [28, 22, 18, 12, 8, 6, 4, 2],
               difficulty: "medium"
+            },
+            {
+              prompt: "Name a word that means 'very small'",
+              responses: ["small", "tiny", "little", "mini", "miniature", "minuscule", "petite", "microscopic"],
+              weights: [30, 25, 20, 10, 8, 4, 2, 1],
+              difficulty: "easy"
+            },
+            {
+              prompt: "Name a word that means 'to speak loudly'",
+              responses: ["yell", "shout", "scream", "holler", "roar", "bellow", "call", "cry"],
+              weights: [35, 30, 15, 8, 5, 4, 2, 1],
+              difficulty: "medium"
+            },
+            {
+              prompt: "Name a word that means 'very quiet'",
+              responses: ["quiet", "silent", "still", "hushed", "mute", "whisper", "soft", "peaceful"],
+              weights: [30, 25, 15, 12, 8, 5, 3, 2],
+              difficulty: "easy"
             }
           ];
 
@@ -182,7 +192,7 @@
             const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
             setCurrentQuestion(randomQuestion);
             setGameState('active');
-            setGameTimer(10);
+            setGameTimer(7);
             setUserAnswer('');
             
             // Simulate other players joining
@@ -193,20 +203,55 @@
           const endGame = () => {
             if (!currentQuestion) return;
             
-            const isCorrect = userAnswer.toLowerCase().trim() === currentQuestion.answer.toLowerCase();
-            const winRate = currentQuestion.difficulty === 'easy' ? 0.15 : 
-                           currentQuestion.difficulty === 'medium' ? 0.10 : 0.05;
-            const winnersCount = Math.max(1, Math.floor(playerCount * winRate));
+            // Simulate what other players typed based on weights
+            const simulatedResponses = [];
+            const totalPlayers = playerCount;
             
-            setWinners(winnersCount);
+            // Distribute responses based on weights
+            let remainingPlayers = totalPlayers;
+            currentQuestion.responses.forEach((response, index) => {
+              const weight = currentQuestion.weights[index];
+              const count = Math.floor((weight / 100) * totalPlayers);
+              for (let i = 0; i < count && remainingPlayers > 0; i++) {
+                simulatedResponses.push(response);
+                remainingPlayers--;
+              }
+            });
             
-            if (isCorrect && hasEnteredGame) {
+            // Add some random variety for remaining players
+            while (remainingPlayers > 0) {
+              const randomResponse = currentQuestion.responses[Math.floor(Math.random() * currentQuestion.responses.length)];
+              simulatedResponses.push(randomResponse);
+              remainingPlayers--;
+            }
+            
+            // Count votes for each response
+            const voteCounts = {};
+            simulatedResponses.forEach(response => {
+              voteCounts[response] = (voteCounts[response] || 0) + 1;
+            });
+            
+            // Find most popular answer
+            const sortedAnswers = Object.entries(voteCounts)
+              .sort(([,a], [,b]) => b - a)
+              .slice(0, 5); // Top 5 answers
+            
+            const mostPopular = sortedAnswers[0][0];
+            const userAnswer_clean = userAnswer.toLowerCase().trim();
+            
+            // Check if user's answer matches the most popular
+            const isWinner = userAnswer_clean === mostPopular.toLowerCase();
+            const winnersCount = voteCounts[mostPopular] || 1;
+            
+            if (isWinner && hasEnteredGame) {
               const prize = Math.floor(potAmount / winnersCount);
               setCredits(prev => prev + prize);
               setGameResult({ 
                 won: true, 
                 prize, 
-                correct: currentQuestion.answer,
+                mostPopular,
+                userAnswer: userAnswer_clean,
+                topAnswers: sortedAnswers,
                 winnersCount 
               });
               setCelebration(true);
@@ -215,7 +260,9 @@
               setGameResult({ 
                 won: false, 
                 prize: 0, 
-                correct: currentQuestion.answer,
+                mostPopular,
+                userAnswer: userAnswer_clean,
+                topAnswers: sortedAnswers,
                 winnersCount 
               });
             }
@@ -224,7 +271,7 @@
             setTimeout(() => {
               setGameState('waiting');
               setTimeLeft(480); // 8 minutes wait
-            }, 4000);
+            }, 6000); // Longer to see results
           };
 
           const enterGame = () => {
@@ -276,7 +323,7 @@
                 {/* Header */}
                 <div className="text-center mb-6">
                   <h1 className="text-3xl font-bold text-green-400 mb-2">WordRush</h1>
-                  <p className="text-slate-400 text-sm">Trading Hours: 9AM - 4PM EST</p>
+                  <p className="text-slate-400 text-sm">Crowd Wisdom • Trading Hours: 9AM - 4PM EST</p>
                 </div>
 
                 {/* Credits Display */}
@@ -322,7 +369,7 @@
                       </div>
                       
                       <p className="text-slate-400 text-sm">
-                        Entry fee: $10 • Winners split the pot
+                        Entry fee: $10 • Guess what most players will say!
                       </p>
                     </div>
                   )}
@@ -340,7 +387,7 @@
                       
                       {!hasEnteredGame ? (
                         <div>
-                          <p className="text-slate-300 mb-4">Buy in now to participate!</p>
+                          <p className="text-slate-300 mb-4">Buy in to guess what the crowd thinks!</p>
                           <button
                             onClick={enterGame}
                             disabled={credits < 10}
@@ -355,7 +402,7 @@
                       ) : (
                         <div>
                           <p className="text-green-400 mb-2">✓ You're in!</p>
-                          <p className="text-slate-300">Get ready...</p>
+                          <p className="text-slate-300">Get ready to think like the crowd...</p>
                         </div>
                       )}
                     </div>
@@ -370,7 +417,10 @@
                         </div>
                         <div className="bg-slate-700 rounded-lg p-4 mb-4">
                           <p className="text-lg font-medium text-slate-100">
-                            {currentQuestion.definition}
+                            {currentQuestion.prompt}
+                          </p>
+                          <p className="text-sm text-slate-400 mt-2">
+                            What will most players say?
                           </p>
                         </div>
                       </div>
@@ -381,7 +431,7 @@
                           value={userAnswer}
                           onChange={(e) => setUserAnswer(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                          placeholder="Type your answer..."
+                          placeholder="Type what most people will say..."
                           className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:border-green-400 transition-colors"
                           autoFocus
                           disabled={!hasEnteredGame}
@@ -401,26 +451,47 @@
                       {gameResult.won ? (
                         <div>
                           <Trophy className="mx-auto text-yellow-400 mb-2" size={48} />
-                          <h2 className="text-2xl font-bold text-green-400 mb-2">Correct!</h2>
+                          <h2 className="text-2xl font-bold text-green-400 mb-2">Survey Says!</h2>
+                          <p className="text-slate-300 mb-2">
+                            You said: <span className="font-bold text-green-400">"{gameResult.userAnswer}"</span>
+                          </p>
                           <p className="text-3xl font-bold text-green-400 mb-2">
                             +${gameResult.prize}
                           </p>
-                          <p className="text-slate-300 mb-2">
-                            You split the pot with {gameResult.winnersCount - 1} other{gameResult.winnersCount === 2 ? '' : 's'}!
+                          <p className="text-slate-300 mb-4">
+                            {gameResult.winnersCount} players said the #1 answer!
                           </p>
                         </div>
                       ) : (
                         <div>
                           <div className="text-red-400 text-4xl mb-2">✗</div>
-                          <h2 className="text-xl font-semibold text-red-400 mb-2">Wrong!</h2>
+                          <h2 className="text-xl font-semibold text-red-400 mb-2">Not the Top Answer!</h2>
                           <p className="text-slate-300 mb-2">
-                            The answer was: <span className="font-bold text-white">{gameResult.correct}</span>
+                            You said: <span className="font-bold text-white">"{gameResult.userAnswer}"</span>
                           </p>
-                          <p className="text-slate-400 text-sm">
-                            {gameResult.winnersCount} players got it right
+                          <p className="text-slate-300 mb-4">
+                            The #1 answer was: <span className="font-bold text-green-400">"{gameResult.mostPopular}"</span>
                           </p>
                         </div>
                       )}
+                      
+                      {/* Family Feud Style Board */}
+                      <div className="bg-slate-700 rounded-lg p-4 mt-4">
+                        <h3 className="font-bold mb-3 text-yellow-400">Top Answers:</h3>
+                        <div className="space-y-2">
+                          {gameResult.topAnswers.map(([answer, votes], index) => (
+                            <div key={answer} className="flex justify-between items-center bg-slate-600 rounded px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-yellow-400">#{index + 1}</span>
+                                <span className={`font-medium ${answer.toLowerCase() === gameResult.userAnswer ? 'text-green-400' : 'text-white'}`}>
+                                  {answer.toUpperCase()}
+                                </span>
+                              </div>
+                              <span className="text-slate-300">{votes}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -435,15 +506,15 @@
                       <div className="bg-slate-700 rounded-lg p-4 mb-4">
                         <h3 className="font-semibold mb-2 text-green-400">Recent Winners</h3>
                         <div className="space-y-1 text-sm text-slate-300">
-                          <div>Player_2847: +$127</div>
-                          <div>WordMaster: +$127</div>
-                          <div>QuickThink: +$127</div>
-                          {gameResult?.won && <div>You: +${gameResult.prize}</div>}
+                          <div>CrowdMaster: +$127 (said "big")</div>
+                          <div>ThinkTank: +$127 (said "big")</div>
+                          <div>GroupMind: +$89 (said "happy")</div>
+                          {gameResult?.won && <div>You: +${gameResult.prize} (said "{gameResult.userAnswer}")</div>}
                         </div>
                       </div>
                       
                       <p className="text-slate-400 text-sm">
-                        Practice your vocabulary while you wait!
+                        Think like the crowd while you wait!
                       </p>
                     </div>
                   )}
