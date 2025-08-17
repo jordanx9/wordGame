@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordRush - Crowd Wisdom Game</title>
+    <title>TriviaRush - Live Battle Royale Tournament</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,19 +13,47 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
         }
+        
+        @keyframes prizeGlow {
+            0% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.4); }
+            100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+        }
+        
+        .prize-glow {
+            animation: prizeGlow 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes slideIn {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { background-color: rgba(34, 197, 94, 0.1); }
+            50% { background-color: rgba(34, 197, 94, 0.3); }
+        }
+        
+        .pulse-green {
+            animation: pulse-green 1s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // Lucide React icons as simple SVG components
-        const Clock = ({ size = 24, className = "" }) => (
+        const Crown = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12,6 12,12 16,14"/>
+                <path d="M2 20h20l-2-6L18 8l-4 4-2-8-2 8-4-4-2 6-2 6z"/>
+                <path d="M6 18h12"/>
             </svg>
         );
 
@@ -55,130 +83,134 @@
             </svg>
         );
 
+        const TrendingUp = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <polyline points="22,7 13.5,15.5 8.5,10.5 2,17"/>
+                <polyline points="16,7 22,7 22,13"/>
+            </svg>
+        );
+
+        const Clock = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12,6 12,12 16,14"/>
+            </svg>
+        );
+
         const Zap = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
             </svg>
         );
 
-        const WordGame = () => {
-          // Game states: 'lobby', 'entry', 'active', 'results', 'waiting'
-          const [gameState, setGameState] = useState('lobby');
-          const [timeLeft, setTimeLeft] = useState(300); // 5 minutes until next game
-          const [gameTimer, setGameTimer] = useState(7); // 10 second game timer
-          const [credits, setCredits] = useState(250);
-          const [userAnswer, setUserAnswer] = useState('');
-          const [currentQuestion, setCurrentQuestion] = useState(null);
-          const [hasEnteredGame, setHasEnteredGame] = useState(false);
-          const [gameResult, setGameResult] = useState(null);
-          const [potAmount, setPotAmount] = useState(1247);
-          const [playerCount, setPlayerCount] = useState(127);
-          const [winners, setWinners] = useState(0);
+        const Target = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="6"/>
+                <circle cx="12" cy="12" r="2"/>
+            </svg>
+        );
+
+        const TriviaRush = () => {
+          const [gameState, setGameState] = useState('lobby'); // 'lobby', 'question', 'results', 'break', 'eliminated', 'winner'
+          const [currentQuestion, setCurrentQuestion] = useState(0);
+          const [timer, setTimer] = useState(30);
+          const [playerCount, setPlayerCount] = useState(8347);
+          const [userPosition, setUserPosition] = useState(null);
+          const [selectedAnswer, setSelectedAnswer] = useState(null);
+          const [userEliminated, setUserEliminated] = useState(false);
+          const [prizePool, setPrizePool] = useState(41735);
+          const [gameMode, setGameMode] = useState('free'); // 'free' or 'paid'
           const [celebration, setCelebration] = useState(false);
+          const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+          const [previousPrize, setPreviousPrize] = useState(0);
+          const [prizeGrowth, setPrizeGrowth] = useState(false);
+          const [waitingForResults, setWaitingForResults] = useState(false);
 
           const questions = [
             {
-              prompt: "Name a word that means 'very big'",
-              responses: ["big", "huge", "large", "enormous", "giant", "massive", "gigantic", "vast"],
-              weights: [30, 25, 15, 12, 8, 5, 3, 2], // Popularity weights
-              difficulty: "easy"
+              question: "What is the capital of France?",
+              options: ["London", "Berlin", "Paris", "Madrid"],
+              correct: 2,
+              survivalRate: 0.75
             },
             {
-              prompt: "Name a word that means 'very angry'",
-              responses: ["mad", "furious", "angry", "livid", "irate", "rage", "pissed", "enraged"],
-              weights: [35, 20, 18, 10, 8, 4, 3, 2],
-              difficulty: "easy"
+              question: "What year did World War II end?",
+              options: ["1944", "1945", "1946", "1943"],
+              correct: 1,
+              survivalRate: 0.65
             },
             {
-              prompt: "Name a word that means 'very cold'",
-              responses: ["cold", "freezing", "icy", "frigid", "frozen", "chilly", "arctic", "bitter"],
-              weights: [25, 30, 15, 12, 8, 6, 3, 1],
-              difficulty: "easy"
+              question: "Which planet is known as the Red Planet?",
+              options: ["Venus", "Mars", "Jupiter", "Saturn"],
+              correct: 1,
+              survivalRate: 0.80
             },
             {
-              prompt: "Name a word that means 'very tired'",
-              responses: ["tired", "exhausted", "beat", "worn", "weary", "drained", "sleepy", "fatigued"],
-              weights: [32, 28, 15, 10, 7, 4, 3, 1],
-              difficulty: "easy"
+              question: "Who wrote 'Romeo and Juliet'?",
+              options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+              correct: 1,
+              survivalRate: 0.70
             },
             {
-              prompt: "Name a word that means 'very smart'",
-              responses: ["smart", "intelligent", "brilliant", "clever", "genius", "wise", "bright", "brainy"],
-              weights: [30, 25, 18, 12, 8, 4, 2, 1],
-              difficulty: "easy"
+              question: "What is the largest ocean on Earth?",
+              options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+              correct: 3,
+              survivalRate: 0.60
             },
             {
-              prompt: "Name a word that means 'very happy'",
-              responses: ["happy", "excited", "joyful", "thrilled", "elated", "glad", "cheerful", "ecstatic"],
-              weights: [35, 20, 15, 12, 8, 5, 3, 2],
-              difficulty: "easy"
+              question: "Which element has the chemical symbol 'O'?",
+              options: ["Gold", "Oxygen", "Silver", "Iron"],
+              correct: 1,
+              survivalRate: 0.85
             },
             {
-              prompt: "Name a word that means 'to move quickly'",
-              responses: ["run", "rush", "hurry", "sprint", "dash", "race", "speed", "bolt"],
-              weights: [28, 22, 18, 12, 8, 6, 4, 2],
-              difficulty: "medium"
+              question: "In what year was the iPhone first released?",
+              options: ["2006", "2007", "2008", "2009"],
+              correct: 1,
+              survivalRate: 0.45
             },
             {
-              prompt: "Name a word that means 'very small'",
-              responses: ["small", "tiny", "little", "mini", "miniature", "minuscule", "petite", "microscopic"],
-              weights: [30, 25, 20, 10, 8, 4, 2, 1],
-              difficulty: "easy"
-            },
-            {
-              prompt: "Name a word that means 'to speak loudly'",
-              responses: ["yell", "shout", "scream", "holler", "roar", "bellow", "call", "cry"],
-              weights: [35, 30, 15, 8, 5, 4, 2, 1],
-              difficulty: "medium"
-            },
-            {
-              prompt: "Name a word that means 'very quiet'",
-              responses: ["quiet", "silent", "still", "hushed", "mute", "whisper", "soft", "peaceful"],
-              weights: [30, 25, 15, 12, 8, 5, 3, 2],
-              difficulty: "easy"
+              question: "What is the smallest prime number?",
+              options: ["1", "2", "3", "0"],
+              correct: 1,
+              survivalRate: 0.35
             }
           ];
 
-          // Main game timer effect
           useEffect(() => {
             let interval;
             
-            if (gameState === 'lobby' && timeLeft > 0) {
+            if (gameState === 'lobby' && timer > 0) {
               interval = setInterval(() => {
-                setTimeLeft(prev => {
+                setTimer(prev => {
                   if (prev <= 1) {
-                    setGameState('entry');
-                    return 30; // 30 seconds to enter
+                    startQuestion();
+                    return 12;
                   }
                   return prev - 1;
                 });
               }, 1000);
-            } else if (gameState === 'entry' && timeLeft > 0) {
+            } else if (gameState === 'question' && timer > 0) {
               interval = setInterval(() => {
-                setTimeLeft(prev => {
+                setTimer(prev => {
                   if (prev <= 1) {
-                    startGame();
+                    // Time's up - show results
+                    if (selectedAnswer === null) {
+                      setSelectedAnswer(-1); // Mark as timed out
+                    }
+                    showResults();
                     return 0;
                   }
                   return prev - 1;
                 });
               }, 1000);
-            } else if (gameState === 'active' && gameTimer > 0) {
+            } else if (gameState === 'break' && timer > 0) {
               interval = setInterval(() => {
-                setGameTimer(prev => {
+                setTimer(prev => {
                   if (prev <= 1) {
-                    endGame();
-                    return 0;
-                  }
-                  return prev - 1;
-                });
-              }, 1000);
-            } else if (gameState === 'waiting' && timeLeft > 0) {
-              interval = setInterval(() => {
-                setTimeLeft(prev => {
-                  if (prev <= 1) {
-                    resetGame();
-                    return 300;
+                    nextQuestion();
+                    return 12;
                   }
                   return prev - 1;
                 });
@@ -186,365 +218,495 @@
             }
 
             return () => clearInterval(interval);
-          }, [gameState, timeLeft, gameTimer]);
+          }, [gameState, timer, selectedAnswer]);
 
-          const startGame = () => {
-            const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-            setCurrentQuestion(randomQuestion);
-            setGameState('active');
-            setGameTimer(7);
-            setUserAnswer('');
-            
-            // Simulate other players joining
-            const finalPlayerCount = Math.floor(Math.random() * 150) + 50;
-            setPlayerCount(finalPlayerCount);
+          const startQuestion = () => {
+            setGameState('question');
+            setSelectedAnswer(null);
+            setShowCorrectAnswer(false);
+            setWaitingForResults(false);
+            setTimer(12);
           };
 
-          const endGame = () => {
-            if (!currentQuestion) return;
+          const selectAnswer = (answerIndex) => {
+            if (selectedAnswer !== null || waitingForResults) return;
+            setSelectedAnswer(answerIndex);
+            setWaitingForResults(true);
+            // Don't call showResults here - let the timer run out naturally
+          };
+
+          const showResults = () => {
+            const question = questions[currentQuestion];
+            const wasCorrect = selectedAnswer === question.correct;
+            const timedOut = selectedAnswer === -1;
             
-            // Simulate what other players typed based on weights
-            const simulatedResponses = [];
-            const totalPlayers = playerCount;
+            setShowCorrectAnswer(true);
+            setWaitingForResults(false);
             
-            // Distribute responses based on weights
-            let remainingPlayers = totalPlayers;
-            currentQuestion.responses.forEach((response, index) => {
-              const weight = currentQuestion.weights[index];
-              const count = Math.floor((weight / 100) * totalPlayers);
-              for (let i = 0; i < count && remainingPlayers > 0; i++) {
-                simulatedResponses.push(response);
-                remainingPlayers--;
+            // Calculate new player count
+            const newPlayerCount = Math.floor(playerCount * question.survivalRate);
+            
+            // Calculate prize increase BEFORE updating player count state
+            if (gameMode === 'paid' && !timedOut && wasCorrect && !userEliminated) {
+              const oldPrize = Math.floor(prizePool / playerCount);
+              const newPrize = Math.floor(prizePool / newPlayerCount);
+              setPreviousPrize(oldPrize);
+              
+              if (newPrize > oldPrize) {
+                setPrizeGrowth(true);
+                setTimeout(() => setPrizeGrowth(false), 2000);
               }
-            });
-            
-            // Add some random variety for remaining players
-            while (remainingPlayers > 0) {
-              const randomResponse = currentQuestion.responses[Math.floor(Math.random() * currentQuestion.responses.length)];
-              simulatedResponses.push(randomResponse);
-              remainingPlayers--;
             }
             
-            // Count votes for each response
-            const voteCounts = {};
-            simulatedResponses.forEach(response => {
-              voteCounts[response] = (voteCounts[response] || 0) + 1;
-            });
+            // Now update the player count state
+            setPlayerCount(newPlayerCount);
             
-            // Find most popular answer
-            const sortedAnswers = Object.entries(voteCounts)
-              .sort(([,a], [,b]) => b - a)
-              .slice(0, 5); // Top 5 answers
-            
-            const mostPopular = sortedAnswers[0][0];
-            const userAnswer_clean = userAnswer.toLowerCase().trim();
-            
-            // Check if user's answer matches the most popular
-            const isWinner = userAnswer_clean === mostPopular.toLowerCase();
-            const winnersCount = voteCounts[mostPopular] || 1;
-            
-            if (isWinner && hasEnteredGame) {
-              const prize = Math.floor(potAmount / winnersCount);
-              setCredits(prev => prev + prize);
-              setGameResult({ 
-                won: true, 
-                prize, 
-                mostPopular,
-                userAnswer: userAnswer_clean,
-                topAnswers: sortedAnswers,
-                winnersCount 
-              });
-              setCelebration(true);
-              setTimeout(() => setCelebration(false), 2000);
-            } else {
-              setGameResult({ 
-                won: false, 
-                prize: 0, 
-                mostPopular,
-                userAnswer: userAnswer_clean,
-                topAnswers: sortedAnswers,
-                winnersCount 
-              });
+            // Handle user elimination only if wrong answer or timeout
+            if (!wasCorrect || timedOut) {
+              setUserEliminated(true);
+            } else if (!userEliminated) {
+              // User got it right - update position
+              const newPosition = Math.floor(Math.random() * Math.min(newPlayerCount, 100)) + 1;
+              setUserPosition(newPosition);
+              
+              if (newPosition <= 10) {
+                setCelebration(true);
+                setTimeout(() => setCelebration(false), 1500);
+              }
             }
             
             setGameState('results');
+            
+            // Auto-progress after showing results for 3 seconds
             setTimeout(() => {
-              setGameState('waiting');
-              setTimeLeft(480); // 8 minutes wait
-            }, 6000); // Longer to see results
+              if (currentQuestion >= questions.length - 1) {
+                // Game is over
+                if (!userEliminated && (wasCorrect && !timedOut)) {
+                  setGameState('winner');
+                  setCelebration(true);
+                  setTimeout(() => setCelebration(false), 3000);
+                } else {
+                  setGameState('eliminated');
+                }
+              } else if (userEliminated || (!wasCorrect || timedOut)) {
+                setGameState('eliminated');
+              } else {
+                setGameState('break');
+                setTimer(15);
+              }
+            }, 3000);
           };
 
-          const enterGame = () => {
-            if (credits >= 10) {
-              setCredits(prev => prev - 10);
-              setHasEnteredGame(true);
-              setPotAmount(prev => prev + 10);
+          const nextQuestion = () => {
+            setCurrentQuestion(prev => prev + 1);
+            setGameState('question');
+            setSelectedAnswer(null);
+            setShowCorrectAnswer(false);
+            setWaitingForResults(false);
+            setTimer(12);
+          };
+
+          const skipTimer = () => {
+            if (gameState === 'lobby') {
+              startQuestion();
+            } else if (gameState === 'question') {
+              if (selectedAnswer === null) {
+                setSelectedAnswer(-1);
+              }
+              showResults();
+            } else if (gameState === 'break') {
+              nextQuestion();
+            } else if (gameState === 'results') {
+              if (currentQuestion >= questions.length - 1) {
+                if (!userEliminated) {
+                  setGameState('winner');
+                  setCelebration(true);
+                  setTimeout(() => setCelebration(false), 3000);
+                } else {
+                  setGameState('eliminated');
+                }
+              } else if (userEliminated) {
+                setGameState('eliminated');
+              } else {
+                setGameState('break');
+                setTimer(15);
+              }
             }
           };
 
           const resetGame = () => {
             setGameState('lobby');
-            setTimeLeft(300);
-            setHasEnteredGame(false);
-            setGameResult(null);
-            setCurrentQuestion(null);
-            setUserAnswer('');
-            setPotAmount(Math.floor(Math.random() * 1000) + 800);
-            setPlayerCount(Math.floor(Math.random() * 50) + 80);
+            setCurrentQuestion(0);
+            setTimer(30);
+            setPlayerCount(Math.floor(Math.random() * 2000) + 7000);
+            setUserPosition(null);
+            setSelectedAnswer(null);
+            setUserEliminated(false);
+            setShowCorrectAnswer(false);
+            setPrizePool(gameMode === 'paid' ? Math.floor(Math.random() * 20000) + 30000 : Math.floor(Math.random() * 500) + 200);
             setCelebration(false);
+            setPreviousPrize(0);
+            setPrizeGrowth(false);
+            setWaitingForResults(false);
           };
 
-          const skipTimer = () => {
-            if (gameState === 'lobby') {
-              setGameState('entry');
-              setTimeLeft(15);
-            } else if (gameState === 'entry') {
-              startGame();
-            } else if (gameState === 'waiting') {
-              resetGame();
-            }
-          };
-
-          const formatTime = (seconds) => {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-          };
-
-          const handleSubmit = (e) => {
-            if (gameState === 'active' && userAnswer.trim() && hasEnteredGame) {
-              endGame();
-            }
-          };
+          const currentQ = questions[currentQuestion];
+          const currentPrizePerWinner = gameMode === 'paid' && playerCount > 0 ? Math.floor(prizePool / playerCount) : 0;
 
           return (
-            <div className={`min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 ${celebration ? 'animate-pulse' : ''}`}>
-              <div className="max-w-md mx-auto">
+            <div className={`min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white p-4 ${celebration ? 'animate-pulse' : ''}`}>
+              <div className="max-w-lg mx-auto">
+                
                 {/* Header */}
                 <div className="text-center mb-6">
-                  <h1 className="text-3xl font-bold text-green-400 mb-2">WordRush</h1>
-                  <p className="text-slate-400 text-sm">Crowd Wisdom • Trading Hours: 9AM - 4PM EST</p>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-red-400 bg-clip-text text-transparent mb-2">
+                    TriviaRush
+                  </h1>
+                  <p className="text-gray-300 text-sm">Live Battle Royale • Daily 8PM EST</p>
+                  
+                  {/* Mode Toggle */}
+                  <div className="flex justify-center mt-4">
+                    <div className="bg-gray-800 rounded-lg p-1 flex">
+                      <button
+                        onClick={() => {
+                          setGameMode('free');
+                          setPrizePool(Math.floor(Math.random() * 500) + 200);
+                        }}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          gameMode === 'free' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        Free Play
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGameMode('paid');
+                          setPrizePool(Math.floor(Math.random() * 20000) + 30000);
+                        }}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          gameMode === 'paid' 
+                            ? 'bg-yellow-600 text-white' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        Wagers
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Credits Display */}
-                <div className="bg-slate-800 rounded-lg p-4 mb-6 border border-slate-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="text-green-400" size={20} />
-                      <span className="text-slate-300">Credits</span>
+                {/* Live Prize Display - Prominent */}
+                {gameMode === 'paid' && !userEliminated && gameState !== 'lobby' && playerCount > 0 && (
+                  <div className={`mb-4 text-center ${prizeGrowth ? 'prize-glow' : ''}`}>
+                    <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-lg border-2 ${prizeGrowth ? 'bg-green-600/30 border-green-400 pulse-green' : 'bg-green-600/20 border-green-500'}`}>
+                      <DollarSign className="text-green-400" size={24} />
+                      <div>
+                        <div className="text-2xl font-bold text-green-300">
+                          ${currentPrizePerWinner.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-green-400">
+                          Your potential prize
+                        </div>
+                        {prizeGrowth && previousPrize > 0 && (
+                          <div className="text-yellow-300 text-sm font-bold animate-pulse">
+                            +${(currentPrizePerWinner - previousPrize).toLocaleString()}!
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-2xl font-bold text-green-400">${credits}</span>
+                  </div>
+                )}
+
+                {/* Game Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="bg-gray-800/70 rounded-lg p-3 text-center border border-gray-700">
+                    <Users className="mx-auto mb-1 text-blue-400" size={16} />
+                    <div className="text-lg font-bold">{playerCount.toLocaleString()}</div>
+                    <div className="text-xs text-gray-400">Players</div>
+                  </div>
+                  <div className="bg-gray-800/70 rounded-lg p-3 text-center border border-gray-700">
+                    <DollarSign className="mx-auto mb-1 text-green-400" size={16} />
+                    <div className="text-lg font-bold">${prizePool.toLocaleString()}</div>
+                    <div className="text-xs text-gray-400">Total Pool</div>
+                  </div>
+                  <div className="bg-gray-800/70 rounded-lg p-3 text-center border border-gray-700">
+                    <Trophy className="mx-auto mb-1 text-yellow-400" size={16} />
+                    <div className="text-lg font-bold">Q{currentQuestion + 1}</div>
+                    <div className="text-xs text-gray-400">of {questions.length}</div>
                   </div>
                 </div>
 
                 {/* Main Game Area */}
-                <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+                <div className="bg-gray-800/70 rounded-xl border border-gray-700 overflow-hidden backdrop-blur-sm">
                   
                   {/* Lobby State */}
                   {gameState === 'lobby' && (
-                    <div className="p-6 text-center">
-                      <div className="mb-4">
-                        <Clock className="mx-auto text-blue-400 mb-2" size={48} />
-                        <h2 className="text-xl font-semibold mb-2">Next Game Starting Soon</h2>
-                        <div className="text-3xl font-bold text-blue-400 mb-4">
-                          {formatTime(timeLeft)}
-                        </div>
+                    <div className="p-8 text-center">
+                      <Clock className="mx-auto text-blue-400 mb-4" size={48} />
+                      <h2 className="text-2xl font-bold mb-4">Game Starting Soon!</h2>
+                      <div className="text-6xl font-bold text-blue-400 mb-4">
+                        {timer}
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-slate-700 rounded p-3">
-                          <div className="flex items-center gap-2 justify-center">
-                            <DollarSign className="text-green-400" size={16} />
-                            <span className="text-sm text-slate-300">Current Pot</span>
-                          </div>
-                          <div className="text-lg font-bold text-green-400">${potAmount}</div>
-                        </div>
-                        <div className="bg-slate-700 rounded p-3">
-                          <div className="flex items-center gap-2 justify-center">
-                            <Users className="text-blue-400" size={16} />
-                            <span className="text-sm text-slate-300">Players</span>
-                          </div>
-                          <div className="text-lg font-bold text-blue-400">{playerCount}</div>
-                        </div>
-                      </div>
-                      
-                      <p className="text-slate-400 text-sm">
-                        Entry fee: $10 • Guess what most players will say!
+                      <p className="text-gray-300 mb-4">
+                        {playerCount.toLocaleString()} players ready to battle!
                       </p>
+                      <div className="bg-gray-700/50 rounded-lg p-4">
+                        <p className="text-sm text-gray-300">
+                          {gameMode === 'paid' 
+                            ? `$5 entry • Winners split $${prizePool.toLocaleString()}` 
+                            : `Free to play • Win points and bragging rights!`
+                          }
+                        </p>
+                      </div>
                     </div>
                   )}
 
-                  {/* Entry State */}
-                  {gameState === 'entry' && (
-                    <div className="p-6 text-center">
-                      <div className="mb-4">
-                        <Zap className="mx-auto text-yellow-400 mb-2" size={48} />
-                        <h2 className="text-xl font-semibold mb-2">Game Starting!</h2>
-                        <div className="text-3xl font-bold text-yellow-400 mb-4">
-                          {timeLeft}s
+                  {/* Question State */}
+                  {gameState === 'question' && currentQ && (
+                    <div className="p-6">
+                      <div className="text-center mb-6">
+                        <div className={`text-4xl font-bold mb-4 ${timer <= 3 ? 'text-red-400 animate-pulse' : waitingForResults ? 'text-yellow-400' : 'text-green-400'}`}>
+                          {timer}
                         </div>
+                        {waitingForResults && (
+                          <div className="text-yellow-400 text-sm mb-2 animate-pulse">
+                            Waiting for time to run out...
+                          </div>
+                        )}
+                        <h3 className="text-lg font-semibold text-gray-200 mb-4">
+                          Question {currentQuestion + 1}
+                        </h3>
+                        <p className="text-xl font-medium text-white mb-6">
+                          {currentQ.question}
+                        </p>
                       </div>
                       
-                      {!hasEnteredGame ? (
-                        <div>
-                          <p className="text-slate-300 mb-4">Buy in to guess what the crowd thinks!</p>
+                      <div className="grid grid-cols-1 gap-3">
+                        {currentQ.options.map((option, index) => (
                           <button
-                            onClick={enterGame}
-                            disabled={credits < 10}
-                            className="bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-semibold transition-colors"
+                            key={index}
+                            onClick={() => selectAnswer(index)}
+                            disabled={selectedAnswer !== null || waitingForResults}
+                            className={`p-4 rounded-lg text-left font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 ${
+                              selectedAnswer === index
+                                ? 'bg-blue-600 border-2 border-blue-400 scale-105' 
+                                : 'bg-gray-700 hover:bg-gray-600 border-2 border-transparent'
+                            } ${waitingForResults && selectedAnswer !== index ? 'opacity-50' : ''}`}
                           >
-                            Enter Game ($10)
+                            <span className="font-bold mr-3 text-yellow-400">
+                              {String.fromCharCode(65 + index)}.
+                            </span>
+                            {option}
                           </button>
-                          {credits < 10 && (
-                            <p className="text-red-400 text-sm mt-2">Insufficient credits</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-green-400 mb-2">✓ You're in!</p>
-                          <p className="text-slate-300">Get ready to think like the crowd...</p>
+                        ))}
+                      </div>
+                      
+                      {/* Current Position Display */}
+                      {userPosition && !userEliminated && (
+                        <div className="mt-4 text-center">
+                          <div className="inline-flex items-center gap-2 bg-yellow-600/20 px-3 py-1 rounded-full">
+                            <TrendingUp size={16} className="text-yellow-400" />
+                            <span className="text-yellow-400 font-semibold">
+                              Rank #{userPosition}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Active Game State */}
-                  {gameState === 'active' && currentQuestion && (
-                    <div className="p-6">
-                      <div className="text-center mb-6">
-                        <div className={`text-6xl font-bold mb-4 ${gameTimer <= 3 ? 'text-red-400 animate-pulse' : 'text-green-400'}`}>
-                          {gameTimer}
+                  {/* Results State */}
+                  {gameState === 'results' && currentQ && (
+                    <div className="p-6 text-center">
+                      {selectedAnswer === currentQ.correct && selectedAnswer !== -1 && !userEliminated ? (
+                        <div className="space-y-4">
+                          <div className="relative">
+                            <div className="text-green-400 text-6xl mb-3 animate-bounce">✓</div>
+                            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                              <div className="bg-green-400 rounded-full w-20 h-20 opacity-20 animate-ping"></div>
+                            </div>
+                          </div>
+                          <h2 className="text-3xl font-bold text-green-400 mb-2">CORRECT!</h2>
+                          <div className="bg-green-400/20 rounded-lg p-4 border-2 border-green-400/50">
+                            <p className="text-green-300 font-semibold text-lg mb-2">
+                              🎯 You advance to the next round!
+                            </p>
+                            {userPosition && userPosition <= 10 && (
+                              <div className="bg-yellow-400/20 rounded-lg p-3 border border-yellow-400/50 mb-3">
+                                <div className="text-yellow-300 font-bold text-xl">
+                                  🔥 TOP 10! Rank #{userPosition}
+                                </div>
+                              </div>
+                            )}
+                            {userPosition && userPosition > 10 && (
+                              <div className="text-blue-300 font-semibold mb-3">
+                                Ladder Position: #{userPosition}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="bg-slate-700 rounded-lg p-4 mb-4">
-                          <p className="text-lg font-medium text-slate-100">
-                            {currentQuestion.prompt}
-                          </p>
-                          <p className="text-sm text-slate-400 mt-2">
-                            What will most players say?
-                          </p>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="relative">
+                            <div className="text-red-400 text-6xl mb-3">💥</div>
+                            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                              <div className="bg-red-400 rounded-full w-20 h-20 opacity-20 animate-ping"></div>
+                            </div>
+                          </div>
+                          <h2 className="text-3xl font-bold text-red-400 mb-2">ELIMINATED!</h2>
+                          <div className="bg-red-400/20 rounded-lg p-4 border-2 border-red-400/50">
+                            <p className="text-red-300 font-semibold mb-3">
+                              {selectedAnswer === -1 ? "⏰ Time's up!" : "❌ Wrong answer!"}
+                            </p>
+                            <div className="bg-gray-700/50 rounded p-3">
+                              <p className="text-gray-300 mb-2">The correct answer was:</p>
+                              <p className="font-bold text-green-400 text-lg">
+                                {String.fromCharCode(65 + currentQ.correct)}. {currentQ.options[currentQ.correct]}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-6">
+                        <div className="bg-gray-700/50 rounded-lg p-4">
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <Users className="text-blue-400" size={20} />
+                            <span className="text-2xl font-bold text-blue-400">
+                              {playerCount.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="text-gray-300 text-sm">
+                            Players advancing to next round
+                          </div>
                         </div>
                       </div>
-                      
-                      <div>
-                        <input
-                          type="text"
-                          value={userAnswer}
-                          onChange={(e) => setUserAnswer(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                          placeholder="Type what most people will say..."
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:border-green-400 transition-colors"
-                          autoFocus
-                          disabled={!hasEnteredGame}
-                        />
-                        {!hasEnteredGame && (
-                          <p className="text-red-400 text-sm mt-2 text-center">
-                            You must enter the game to answer
-                          </p>
+                    </div>
+                  )}
+
+                  {/* Break State */}
+                  {gameState === 'break' && (
+                    <div className="p-6 text-center">
+                      <Zap className="mx-auto text-yellow-400 mb-4" size={48} />
+                      <h2 className="text-xl font-semibold mb-4">Next Question Starting...</h2>
+                      <div className="text-4xl font-bold text-yellow-400 mb-4">
+                        {timer}
+                      </div>
+                      <div className="bg-gray-700/50 rounded-lg p-4 mb-4">
+                        <p className="text-gray-300 mb-2">
+                          {playerCount.toLocaleString()} players advancing to Question {currentQuestion + 2}
+                        </p>
+                        {userPosition && (
+                          <div className="bg-yellow-600/20 rounded p-3 border border-yellow-400/50 mb-3">
+                            <p className="text-yellow-300 font-semibold">
+                              🎯 Your current rank: #{userPosition}
+                            </p>
+                          </div>
+                        )}
+                        {gameMode === 'paid' && !userEliminated && (
+                          <div className="bg-green-600/20 rounded p-3 border border-green-400/50">
+                            <div className="text-green-300 font-bold text-lg mb-1">
+                              💰 If You Win Now: ${currentPrizePerWinner.toLocaleString()}
+                            </div>
+                            <div className="text-green-400 text-sm">
+                              💎 Prize keeps growing as more players are eliminated!
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Results State */}
-                  {gameState === 'results' && gameResult && (
+                  {/* Winner State */}
+                  {gameState === 'winner' && (
                     <div className="p-6 text-center">
-                      {gameResult.won ? (
-                        <div>
-                          <Trophy className="mx-auto text-yellow-400 mb-2" size={48} />
-                          <h2 className="text-2xl font-bold text-green-400 mb-2">Survey Says!</h2>
-                          <p className="text-slate-300 mb-2">
-                            You said: <span className="font-bold text-green-400">"{gameResult.userAnswer}"</span>
-                          </p>
-                          <p className="text-3xl font-bold text-green-400 mb-2">
-                            +${gameResult.prize}
-                          </p>
-                          <p className="text-slate-300 mb-4">
-                            {gameResult.winnersCount} players said the #1 answer!
-                          </p>
+                      <div className="relative mb-6">
+                        <Crown className="mx-auto text-yellow-400 mb-4" size={64} />
+                        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                          <div className="bg-yellow-400 rounded-full w-24 h-24 opacity-20 animate-ping"></div>
                         </div>
-                      ) : (
-                        <div>
-                          <div className="text-red-400 text-4xl mb-2">✗</div>
-                          <h2 className="text-xl font-semibold text-red-400 mb-2">Not the Top Answer!</h2>
-                          <p className="text-slate-300 mb-2">
-                            You said: <span className="font-bold text-white">"{gameResult.userAnswer}"</span>
-                          </p>
-                          <p className="text-slate-300 mb-4">
-                            The #1 answer was: <span className="font-bold text-green-400">"{gameResult.mostPopular}"</span>
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* Family Feud Style Board */}
-                      <div className="bg-slate-700 rounded-lg p-4 mt-4">
-                        <h3 className="font-bold mb-3 text-yellow-400">Top Answers:</h3>
-                        <div className="space-y-2">
-                          {gameResult.topAnswers.map(([answer, votes], index) => (
-                            <div key={answer} className="flex justify-between items-center bg-slate-600 rounded px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-yellow-400">#{index + 1}</span>
-                                <span className={`font-medium ${answer.toLowerCase() === gameResult.userAnswer ? 'text-green-400' : 'text-white'}`}>
-                                  {answer.toUpperCase()}
-                                </span>
-                              </div>
-                              <span className="text-slate-300">{votes}</span>
+                      </div>
+                      <h2 className="text-4xl font-bold text-yellow-400 mb-4">🏆 CHAMPION! 🏆</h2>
+                      <div className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 rounded-lg p-6 border-2 border-yellow-400/50 mb-4">
+                        <p className="text-yellow-300 text-lg font-semibold mb-4">
+                          You survived all {questions.length} questions!
+                        </p>
+                        <div className="space-y-3">
+                          <div className="bg-yellow-600/30 rounded-lg p-3">
+                            <div className="text-2xl font-bold text-yellow-400 mb-1">
+                              Final Rank: #{userPosition || 1}
                             </div>
-                          ))}
+                          </div>
+                          {gameMode === 'paid' && (
+                            <div className="bg-green-600/30 rounded-lg p-3 prize-glow">
+                              <div className="text-xl font-bold text-green-400">
+                                💰 Your Prize: ${currentPrizePerWinner.toLocaleString()}
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                      <div className="text-gray-400 text-sm">
+                        {playerCount} total winners {gameMode === 'paid' ? `split the $${prizePool.toLocaleString()} prize pool` : 'crowned as champions!'}
                       </div>
                     </div>
                   )}
 
-                  {/* Waiting State */}
-                  {gameState === 'waiting' && (
+                  {/* Eliminated State */}
+                  {gameState === 'eliminated' && (
                     <div className="p-6 text-center">
-                      <h2 className="text-xl font-semibold mb-4">Next Game In</h2>
-                      <div className="text-2xl font-bold text-blue-400 mb-4">
-                        {formatTime(timeLeft)}
-                      </div>
-                      
-                      <div className="bg-slate-700 rounded-lg p-4 mb-4">
-                        <h3 className="font-semibold mb-2 text-green-400">Recent Winners</h3>
-                        <div className="space-y-1 text-sm text-slate-300">
-                          <div>CrowdMaster: +$127 (said "big")</div>
-                          <div>ThinkTank: +$127 (said "big")</div>
-                          <div>GroupMind: +$89 (said "happy")</div>
-                          {gameResult?.won && <div>You: +${gameResult.prize} (said "{gameResult.userAnswer}")</div>}
+                      <div className="text-red-400 text-6xl mb-4">💀</div>
+                      <h2 className="text-3xl font-bold text-red-400 mb-4">Game Over!</h2>
+                      <div className="bg-red-400/20 rounded-lg p-6 border-2 border-red-400/50 mb-4">
+                        <p className="text-red-300 text-lg font-semibold mb-4">
+                          You made it to Question {currentQuestion + 1} of {questions.length}
+                        </p>
+                        <div className="bg-gray-700/50 rounded-lg p-4">
+                          <div className="text-gray-300 mb-2">
+                            Final Stats:
+                          </div>
+                          <div className="text-blue-400 font-semibold">
+                            Outlasted {(8347 - playerCount).toLocaleString()} players!
+                          </div>
                         </div>
                       </div>
-                      
-                      <p className="text-slate-400 text-sm">
-                        Think like the crowd while you wait!
-                      </p>
+                      <div className="bg-gray-700/50 rounded-lg p-4">
+                        <div className="text-gray-300 text-sm">
+                          Better luck next time! Next tournament in 12 hours.
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Quick Actions */}
-                <div className="mt-6 grid grid-cols-3 gap-2">
+                {/* Controls */}
+                <div className="mt-6 flex gap-3">
                   <button
                     onClick={resetGame}
-                    className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors"
                   >
-                    Reset Demo
+                    Play Again
                   </button>
                   <button
                     onClick={skipTimer}
-                    className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm transition-colors"
+                    className="bg-yellow-600 hover:bg-yellow-700 px-4 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
                   >
+                    <Target size={16} />
                     Skip Timer
-                  </button>
-                  <button
-                    onClick={() => setCredits(prev => prev + 100)}
-                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-colors"
-                  >
-                    Add Credits
                   </button>
                 </div>
 
                 {celebration && (
                   <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-6xl animate-bounce">🎉</div>
+                    <div className="text-8xl animate-bounce">👑</div>
+                  </div>
+                )}
+                
+                {prizeGrowth && (
+                  <div className="fixed top-1/4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg font-bold slide-in">
+                    💰 Prize Growing!
                   </div>
                 )}
               </div>
@@ -552,7 +714,10 @@
           );
         };
 
-        ReactDOM.render(<WordGame />, document.getElementById('root'));
+        // Use React 18 createRoot API
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<TriviaRush />);
     </script>
 </body>
 </html>
